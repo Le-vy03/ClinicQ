@@ -171,7 +171,11 @@ export function PatientHome({ bookForElse }: { bookForElse: boolean }) {
           {summary && summary.queue_id === queueId && (
             <p className="text-sm text-slate-600">
               {summary.queue_name} at {summary.clinic_name}: {summary.waiting_count} waiting
-              {summary.is_open ? `, about ${waitLabel(summary.estimated_wait_minutes_for_new_ticket)} for a new ticket` : " · this queue is closed"}.
+              {summary.is_open
+                ? summary.estimated_wait_minutes_for_new_ticket > 0
+                  ? `, about ${waitLabel(summary.estimated_wait_minutes_for_new_ticket)} for a new ticket`
+                  : ". A new ticket would be next."
+                : " · this queue is closed"}.
             </p>
           )}
           <Field label={forElse ? "Their full name" : "Your full name"}>
