@@ -1,15 +1,511 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#084422" />
-    <title>ClinicQ — Zambia clinic queue helper</title>
-    <meta name="description" content="Hold your place at UTH and other Lusaka public clinics. ClinicQ gives you a queue number, an honest wait, and a message when it is time to walk in." />
-    <link rel="icon" href="/favicon.svg" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClinicQ — Lusaka Public Clinics Digital Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } } }
+    </script>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans antialiased selection:bg-blue-200 selection:text-blue-900">
+    <div id="app" class="min-h-screen flex flex-col lg:flex-row">
+        <aside id="sidebar" class="w-full lg:w-80 xl:w-96 bg-[#0F2D5C] text-white flex flex-col justify-between p-6 lg:p-8 shrink-0 transition-colors duration-300 shadow-xl z-20">
+            <div>
+                <div class="flex items-center justify-between lg:justify-start gap-3.5">
+                    <div class="flex items-center gap-3.5">
+                        <div id="brand-badge" class="w-11 h-11 rounded-xl bg-white text-[#0F2D5C] font-extrabold text-lg flex items-center justify-center shadow-md tracking-tight shrink-0 transition-colors duration-300">CQ</div>
+                        <div>
+                            <h1 class="text-xl font-bold tracking-tight leading-none text-white">ClinicQ</h1>
+                            <p id="brand-sub" class="text-xs font-medium text-blue-200 mt-1">Lusaka public clinics</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleDemo()" id="mobile-demo-btn" class="lg:hidden px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-semibold text-white backdrop-blur-sm transition flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Play demo</span>
+                    </button>
+                </div>
+                <div class="mt-6 lg:mt-8 hidden sm:block">
+                    <p class="text-sm font-semibold text-white leading-relaxed">Patients in Zambia lose whole days queuing at government clinics.</p>
+                    <p id="sidebar-desc" class="text-xs text-blue-200/90 leading-relaxed mt-2">ClinicQ holds your place at UTH and other Lusaka clinics, then messages you when it is time to walk in.</p>
+                </div>
+                <nav class="mt-6 lg:mt-8 flex lg:flex-col gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="Main Navigation">
+                    <button onclick="switchTab('patient')" id="nav-patient" class="nav-btn flex-1 lg:flex-none flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-sm bg-white text-[#0F2D5C] shadow-sm transition-all">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                            <span>Patient</span>
+                        </span>
+                        <span id="nav-patient-badge" class="hidden lg:inline-flex text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">UTH-118</span>
+                    </button>
+                    <button onclick="switchTab('staff')" id="nav-staff" class="nav-btn flex-1 lg:flex-none flex items-center justify-between px-4 py-3 rounded-xl font-medium text-sm text-blue-100 hover:bg-white/10 transition-all">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                            <span>Staff desk</span>
+                        </span>
+                        <span class="hidden lg:inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-blue-100">OPD 1</span>
+                    </button>
+                    <button onclick="switchTab('messages')" id="nav-messages" class="nav-btn flex-1 lg:flex-none flex items-center justify-between px-4 py-3 rounded-xl font-medium text-sm text-blue-100 hover:bg-white/10 transition-all">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                            <span>Messages</span>
+                        </span>
+                        <span id="msg-count-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950">2</span>
+                    </button>
+                </nav>
+            </div>
+            <div class="mt-8 pt-6 border-t border-white/15 hidden lg:block">
+                <div class="flex items-center justify-between text-xs text-blue-200 mb-3">
+                    <span class="font-medium">Interactive Queue Simulator</span>
+                    <span id="sim-status-text" class="text-emerald-300 font-semibold">Paused</span>
+                </div>
+                <button onclick="toggleDemo()" id="desktop-demo-btn" class="w-full py-3 px-4 rounded-xl bg-white text-[#0F2D5C] hover:bg-blue-50 font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <svg id="demo-play-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+                    <span id="demo-btn-label">Play demo</span>
+                </button>
+                <button onclick="resetDemo()" class="w-full mt-2.5 py-2 px-3 rounded-lg text-xs font-medium text-blue-200 hover:text-white hover:bg-white/10 transition text-center cursor-pointer">Reset demo day</button>
+            </div>
+        </aside>
+        <main class="flex-1 bg-[#F4F7FA] min-h-screen flex flex-col">
+            <header class="bg-white border-b border-slate-200/80 px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-10">
+                <div class="flex items-center gap-2.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        Live Desk Sync
+                    </span>
+                    <span class="text-xs text-slate-500 hidden sm:inline">SMS Gateway: Airtel / MTN / Zamtel Active</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+                    <span class="text-[11px] font-semibold text-slate-500 pl-2 hidden sm:inline">Theme:</span>
+                    <button onclick="setTheme('navy')" id="theme-btn-navy" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-[#0F2D5C] shadow-sm transition flex items-center gap-1.5 cursor-pointer"><span class="w-2.5 h-2.5 rounded-full bg-[#1D56A8]"></span>Medical Blue</button>
+                    <button onclick="setTheme('teal')" id="theme-btn-teal" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer"><span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>Clean Teal</button>
+                    <button onclick="setTheme('forest')" id="theme-btn-forest" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer"><span class="w-2.5 h-2.5 rounded-full bg-[#1B4332]"></span>Classic Green</button>
+                </div>
+            </header>
+            <section id="view-patient" class="max-w-4xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-6">
+                <div id="desk-banner" class="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300">
+                    <div class="flex items-start sm:items-center gap-3">
+                        <div id="desk-banner-icon" class="w-9 h-9 rounded-xl bg-[#1D56A8] text-white flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-500">YOUR VISIT • FRIDAY 20 NOV</p>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Hold this ticket. The desk can see it.</h2>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 self-start sm:self-center">
+                        <span class="px-3 py-1 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-xs">Verified Check-in</span>
+                    </div>
+                </div>
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+                    <div class="p-6 sm:p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-b from-slate-50/70 to-white">
+                        <div>
+                            <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <span>Ridgeway, Lusaka</span>
+                            </div>
+                            <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">University Teaching Hospital</h3>
+                            <p class="text-sm font-medium text-slate-600 mt-0.5">General OPD • Today 08:30</p>
+                        </div>
+                        <div class="md:text-right bg-slate-50 md:bg-transparent p-3.5 md:p-0 rounded-2xl border border-slate-200/60 md:border-0">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Patient</p>
+                            <p class="text-base font-bold text-slate-900">Lweendo Tembo</p>
+                            <p class="text-sm font-medium text-slate-600 font-mono mt-0.5">+260 97 418 6620</p>
+                        </div>
+                    </div>
+                    <div class="p-6 sm:p-8">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                            <div id="ticket-hero-box" class="md:col-span-5 bg-[#0F2D5C] text-white rounded-2xl p-6 text-center md:text-left relative overflow-hidden shadow-md transition-colors duration-300">
+                                <div class="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/5 pointer-events-none"></div>
+                                <p class="text-xs font-bold uppercase tracking-widest text-blue-200">Queue Number</p>
+                                <div class="text-5xl sm:text-6xl font-black tracking-tight my-2 tabular-nums">UTH-118</div>
+                                <div class="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/15 px-3 py-1 rounded-full text-white mt-1">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                    <span>Active in General OPD</span>
+                                </div>
+                            </div>
+                            <div class="md:col-span-7 grid grid-cols-2 gap-4">
+                                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Place in line</p>
+                                    <p id="place-in-line-text" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1.5">5th in line</p>
+                                    <p id="ahead-subtext" class="text-xs font-medium text-slate-500 mt-1">4 patients ahead</p>
+                                </div>
+                                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estimated wait</p>
+                                    <p id="est-wait-text" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1.5">~48 mins</p>
+                                    <p class="text-xs font-medium text-emerald-700 mt-1">SMS alert at 2nd</p>
+                                </div>
+                                <div class="col-span-2 bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+                                    <div class="flex items-center justify-between text-xs font-semibold mb-2">
+                                        <span class="text-slate-600">Queue Progress</span>
+                                        <span id="progress-label" class="text-[#1D56A8] font-bold">20% closer to desk</span>
+                                    </div>
+                                    <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                                        <div id="queue-progress-bar" class="h-full bg-[#1D56A8] rounded-full transition-all duration-500" style="width: 20%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-8 pt-6 border-t border-slate-100">
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Recent Desk Calls</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200/80 flex flex-col">
+                                    <span class="font-bold text-emerald-800 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>At the desk</span>
+                                    <span class="font-mono font-bold text-slate-800 mt-1">UTH-114</span>
+                                </div>
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex flex-col text-slate-500"><span class="font-semibold">Seen • 07:30</span><span class="font-mono font-semibold text-slate-700 mt-1">UTH-115</span></div>
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex flex-col text-slate-500"><span class="font-semibold">Seen • 08:00</span><span class="font-mono font-semibold text-slate-700 mt-1">UTH-116</span></div>
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex flex-col text-slate-500"><span class="font-semibold">Seen • 08:15</span><span class="font-mono font-semibold text-slate-700 mt-1">UTH-117</span></div>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                    <h4 id="live-queue-heading" class="text-sm font-bold text-slate-800">Live • 4 people ahead • about 12 minutes each</h4>
+                                </div>
+                                <span class="text-xs text-slate-500">Auto-updates live</span>
+                            </div>
+                            <div id="queue-list-container" class="space-y-2.5"></div>
+                        </div>
+                        <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                            <button onclick="openModal('book-modal')" id="primary-action-btn" class="px-6 py-3.5 rounded-xl bg-[#1D56A8] hover:bg-[#164385] text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                                <span>Book for someone else</span>
+                            </button>
+                            <button onclick="openModal('cancel-modal')" class="px-5 py-3.5 rounded-xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100/70 text-rose-700 font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <span>I can't make it</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section id="view-staff" class="hidden max-w-4xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-6">
+                <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/90">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">Nurse & Triage Console</span>
+                            <h2 class="text-2xl font-extrabold text-slate-900 mt-2">UTH General OPD — Desk 1</h2>
+                            <p class="text-sm text-slate-500">Call the next patient in line. Automated SMS alerts trigger automatically.</p>
+                        </div>
+                        <button onclick="advanceQueueStep()" id="staff-call-next-btn" class="px-5 py-3 rounded-xl bg-[#1D56A8] hover:bg-[#164385] text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            <span>Call Next Patient</span>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70"><p class="text-xs font-semibold text-slate-500">Currently at Desk</p><p id="staff-current-ticket" class="text-xl font-extrabold text-slate-900 mt-1">UTH-114</p></div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70"><p class="text-xs font-semibold text-slate-500">Waiting in Digital Queue</p><p id="staff-waiting-count" class="text-xl font-extrabold text-slate-900 mt-1">5 Patients</p></div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70"><p class="text-xs font-semibold text-slate-500">Avg. Consultation Time</p><p class="text-xl font-extrabold text-emerald-700 mt-1">12 mins</p></div>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800 mb-3">Active Queue Roster</h3>
+                    <div id="staff-roster-list" class="space-y-2.5"></div>
+                </div>
+            </section>
+            <section id="view-messages" class="hidden max-w-3xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-6">
+                <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/90">
+                    <div class="flex items-center justify-between pb-5 border-b border-slate-100">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-900">SMS & WhatsApp Notifications</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Sent to Lweendo Tembo (+260 97 418 6620)</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">Zero-data SMS enabled</span>
+                    </div>
+                    <div id="messages-feed" class="mt-6 space-y-4"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div id="book-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-extrabold text-slate-900">Book for someone else</h3>
+                <button onclick="closeModal('book-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 mb-4">Add a family member or dependent to the General OPD queue at University Teaching Hospital.</p>
+            <form onsubmit="handleBookSomeoneElse(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Patient Full Name</label>
+                    <input type="text" id="dep-name" required placeholder="e.g., Bwalya Tembo" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Relationship</label>
+                    <select id="dep-rel" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>Child / Dependent</option><option>Spouse</option><option>Parent / Elder</option><option>Other</option>
+                    </select>
+                </div>
+                <div class="pt-2 flex items-center justify-end gap-2.5">
+                    <button type="button" onclick="closeModal('book-modal')" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-[#1D56A8] hover:bg-[#164385] text-white text-sm font-bold shadow-sm cursor-pointer">Issue Ticket UTH-119</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="cancel-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200">
+            <div class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h3 class="text-lg font-extrabold text-slate-900">Release your place in line?</h3>
+            <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">If you can't make it to UTH today, releasing ticket <span class="font-bold text-slate-900">UTH-118</span> lets other Lusaka patients move up faster.</p>
+            <div class="mt-6 flex items-center justify-end gap-2.5">
+                <button onclick="closeModal('cancel-modal')" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer">Keep my spot</button>
+                <button onclick="confirmCancelTicket()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold shadow-sm cursor-pointer">Yes, release ticket</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-medium border border-slate-700">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span id="toast-msg">Queue updated</span>
+        </div>
+    </div>
+    <script>
+        const initialPatients = [
+            { id: 'UTH-114', name: 'Mutale', isUser: false, status: 'At the desk' },
+            { id: 'UTH-115', name: 'Natasha', isUser: false, status: 'Waiting' },
+            { id: 'UTH-116', name: 'Joseph', isUser: false, status: 'Waiting' },
+            { id: 'UTH-117', name: 'Chanda', isUser: false, status: 'Waiting' },
+            { id: 'UTH-118', name: 'Lweendo Tembo', isUser: true, status: 'Waiting' }
+        ];
+        let queue = JSON.parse(JSON.stringify(initialPatients));
+        let demoInterval = null;
+        let currentTheme = 'navy';
+        let currentTab = 'patient';
+        let messages = [
+            { time: 'Today, 07:45', sender: 'ClinicQ UTH', text: 'Welcome Lweendo Tembo! Your digital ticket UTH-118 for General OPD at University Teaching Hospital is confirmed. We will SMS you when 2 people are ahead.' },
+            { time: 'Today, 08:28', sender: 'ClinicQ UTH', text: 'Queue Update: 4 people are currently ahead of UTH-118 (est. wait 48 mins). You do not need to stand in the corridor yet.' }
+        ];
+        const STORAGE_KEY = 'clinicq.desk.v1';
+        let applyingRemote = false;
+        function persist() {
+            if (applyingRemote) return;
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ queue, messages })); } catch (err) { /* private mode */ }
+        }
+        function applyStored(raw) {
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            if (!Array.isArray(data.queue) || !Array.isArray(data.messages)) return false;
+            queue = data.queue;
+            messages = data.messages;
+            return true;
+        }
+        window.addEventListener('storage', (event) => {
+            if (event.key !== STORAGE_KEY || !event.newValue) return;
+            try {
+                applyingRemote = true;
+                if (applyStored(event.newValue)) renderAll();
+            } catch (err) { /* ignore a bad write */ }
+            finally { applyingRemote = false; }
+        });
+        const themes = {
+            navy: { sidebarBg: '#0F2D5C', brandText: '#0F2D5C', subText: 'text-blue-200', heroBg: '#0F2D5C', primaryBtn: '#1D56A8', primaryHover: '#164385', progressBg: '#1D56A8', progressText: 'text-[#1D56A8]', bannerBg: 'bg-blue-50/90 border-blue-200', bannerIcon: '#1D56A8' },
+            teal: { sidebarBg: '#114B5F', brandText: '#114B5F', subText: 'text-teal-200', heroBg: '#114B5F', primaryBtn: '#028090', primaryHover: '#026775', progressBg: '#028090', progressText: 'text-teal-700', bannerBg: 'bg-teal-50/90 border-teal-200', bannerIcon: '#028090' },
+            forest: { sidebarBg: '#1B4332', brandText: '#1B4332', subText: 'text-emerald-200', heroBg: '#1B4332', primaryBtn: '#2D6A4F', primaryHover: '#1B4332', progressBg: '#2D6A4F', progressText: 'text-emerald-800', bannerBg: 'bg-emerald-50/90 border-emerald-200', bannerIcon: '#2D6A4F' }
+        };
+        function setTheme(themeKey) {
+            currentTheme = themeKey;
+            const t = themes[themeKey];
+            document.getElementById('sidebar').style.backgroundColor = t.sidebarBg;
+            document.getElementById('brand-badge').style.color = t.brandText;
+            document.getElementById('ticket-hero-box').style.backgroundColor = t.heroBg;
+            document.getElementById('primary-action-btn').style.backgroundColor = t.primaryBtn;
+            document.getElementById('staff-call-next-btn').style.backgroundColor = t.primaryBtn;
+            document.getElementById('queue-progress-bar').style.backgroundColor = t.progressBg;
+            document.getElementById('desk-banner-icon').style.backgroundColor = t.bannerIcon;
+            const banner = document.getElementById('desk-banner');
+            banner.className = `${t.bannerBg} border rounded-2xl p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300`;
+            ['navy', 'teal', 'forest'].forEach(key => {
+                const btn = document.getElementById(`theme-btn-${key}`);
+                btn.className = key === themeKey
+                    ? 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition flex items-center gap-1.5 cursor-pointer'
+                    : 'px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer';
+            });
+            switchTab(currentTab);
+            renderAll();
+        }
+        function switchTab(tab) {
+            currentTab = tab;
+            const t = themes[currentTheme];
+            ['patient', 'staff', 'messages'].forEach(name => {
+                const view = document.getElementById(`view-${name}`);
+                const btn = document.getElementById(`nav-${name}`);
+                if (name === tab) {
+                    view.classList.remove('hidden');
+                    btn.className = 'nav-btn flex-1 lg:flex-none flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm bg-white shadow-sm transition-all cursor-pointer';
+                    btn.style.color = t.brandText;
+                } else {
+                    view.classList.add('hidden');
+                    btn.className = 'nav-btn flex-1 lg:flex-none flex items-center justify-between px-4 py-3 rounded-xl font-medium text-sm text-white/85 hover:bg-white/10 transition-all cursor-pointer';
+                    btn.style.color = '';
+                }
+            });
+        }
+        function getOrdinal(n) { const s = ["th", "st", "nd", "rd"]; const v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+        function renderAll() {
+            const userIndex = queue.findIndex(p => p.isUser);
+            const peopleAhead = userIndex === -1 ? 0 : userIndex;
+            const place = peopleAhead + 1;
+            const estWait = peopleAhead * 12;
+            const placeEl = document.getElementById('place-in-line-text');
+            const aheadSubEl = document.getElementById('ahead-subtext');
+            const waitEl = document.getElementById('est-wait-text');
+            const headingEl = document.getElementById('live-queue-heading');
+            const progressBar = document.getElementById('queue-progress-bar');
+            const progressLabel = document.getElementById('progress-label');
+            if (userIndex === -1) {
+                placeEl.textContent = 'Completed'; aheadSubEl.textContent = 'Visit finished'; waitEl.textContent = '0 mins';
+                headingEl.textContent = 'Live • Your consultation is complete'; progressBar.style.width = '100%'; progressLabel.textContent = '100% complete';
+            } else if (peopleAhead === 0) {
+                placeEl.textContent = 'Your turn now!'; aheadSubEl.textContent = 'Proceed to OPD Desk 1'; waitEl.textContent = 'Walk in now';
+                headingEl.textContent = 'Live • You are at the front of the queue!'; progressBar.style.width = '100%'; progressLabel.textContent = 'Ready at desk';
+            } else {
+                placeEl.textContent = `${getOrdinal(place)} in line`;
+                aheadSubEl.textContent = `${peopleAhead} ${peopleAhead === 1 ? 'person' : 'people'} ahead`;
+                waitEl.textContent = `~${estWait} mins`;
+                headingEl.textContent = `Live • ${peopleAhead} ${peopleAhead === 1 ? 'person' : 'people'} ahead • about 12 minutes each`;
+                const pct = Math.min(95, Math.max(20, Math.round(((5 - peopleAhead) / 5) * 100)));
+                progressBar.style.width = `${pct}%`; progressLabel.textContent = `${pct}% closer to desk`;
+            }
+            const listContainer = document.getElementById('queue-list-container');
+            listContainer.innerHTML = '';
+            queue.forEach((person, idx) => {
+                const row = document.createElement('div');
+                const isFirst = idx === 0;
+                if (person.isUser) {
+                    row.className = 'flex items-center justify-between p-4 rounded-2xl bg-blue-50/90 border-2 border-[#1D56A8] shadow-xs';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3.5">
+                            <span class="w-8 h-8 rounded-full bg-[#1D56A8] text-white font-extrabold text-sm flex items-center justify-center shrink-0">${idx + 1}</span>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-slate-900 text-sm sm:text-base">${person.name}</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-[#1D56A8] text-white text-[11px] font-bold">YOU</span>
+                                </div>
+                                <span class="text-xs text-slate-600 font-mono">${person.id} • General OPD</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-[#1D56A8] bg-white px-3 py-1 rounded-full border border-blue-200">${idx === 0 ? 'Walk in now' : `${idx * 12}m wait`}</span>`;
+                } else {
+                    row.className = 'flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 transition';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3.5">
+                            <span class="w-8 h-8 rounded-full ${isFirst ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'} font-bold text-sm flex items-center justify-center shrink-0">${idx + 1}</span>
+                            <div>
+                                <span class="font-bold text-slate-800 text-sm sm:text-base">${person.name}</span>
+                                <span class="block text-xs text-slate-400 font-mono">${person.id}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold ${isFirst ? 'text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-full' : 'text-slate-500'}">${isFirst ? 'Being called' : 'In queue'}</span>`;
+                }
+                listContainer.appendChild(row);
+            });
+            const staffRoster = document.getElementById('staff-roster-list');
+            staffRoster.innerHTML = '';
+            document.getElementById('staff-waiting-count').textContent = `${queue.length} Patients`;
+            document.getElementById('staff-current-ticket').textContent = queue.length > 0 ? queue[0].id : 'None';
+            queue.forEach((p, idx) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/70';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="font-mono font-bold text-xs px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-800">${p.id}</span>
+                        <span class="font-semibold text-sm text-slate-900">${p.name} ${p.isUser ? '(Lweendo — Verified SMS)' : ''}</span>
+                    </div>
+                    <span class="text-xs font-semibold ${idx === 0 ? 'text-emerald-700' : 'text-slate-500'}">${idx === 0 ? 'Next / At Desk' : `Position #${idx + 1}`}</span>`;
+                staffRoster.appendChild(item);
+            });
+            const msgFeed = document.getElementById('messages-feed');
+            msgFeed.innerHTML = '';
+            document.getElementById('msg-count-badge').textContent = messages.length;
+            messages.forEach(m => {
+                const bubble = document.createElement('div');
+                bubble.className = 'p-4 rounded-2xl bg-slate-50 border border-slate-200/80';
+                bubble.innerHTML = `
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                        <span class="font-bold text-slate-800">${m.sender}</span>
+                        <span class="text-slate-400">${m.time}</span>
+                    </div>
+                    <p class="text-sm text-slate-700 leading-relaxed">${m.text}</p>`;
+                msgFeed.appendChild(bubble);
+            });
+            persist();
+        }
+        function advanceQueueStep() {
+            if (queue.length === 0) { stopDemo(); showToast('Demo day completed! Click "Reset demo day" to replay.'); return; }
+            const served = queue.shift();
+            const userIdx = queue.findIndex(p => p.isUser);
+            if (userIdx === 2) {
+                messages.unshift({ time: 'Just now', sender: 'ClinicQ UTH', text: 'Heads up Lweendo! Only 2 people are ahead of UTH-118 now (~24 mins). Please begin heading toward UTH General OPD.' });
+                showToast('SMS sent: 2 people ahead of you!');
+            } else if (userIdx === 0) {
+                messages.unshift({ time: 'Just now', sender: 'ClinicQ UTH', text: 'IT IS YOUR TURN: Ticket UTH-118 (Lweendo Tembo), please walk in to General OPD Desk 1 now.' });
+                showToast('Your turn! Walk in to Desk 1.');
+                stopDemo();
+            } else {
+                showToast(`${served.name} (${served.id}) seen at desk.`);
+            }
+            renderAll();
+        }
+        function toggleDemo() {
+            if (demoInterval) { stopDemo(); }
+            else {
+                document.getElementById('demo-btn-label').textContent = 'Pause demo';
+                document.getElementById('sim-status-text').textContent = 'Running live...';
+                advanceQueueStep();
+                demoInterval = setInterval(advanceQueueStep, 3200);
+            }
+        }
+        function stopDemo() {
+            if (demoInterval) { clearInterval(demoInterval); demoInterval = null; }
+            document.getElementById('demo-btn-label').textContent = 'Play demo';
+            document.getElementById('sim-status-text').textContent = 'Paused';
+        }
+        function resetDemo() {
+            stopDemo();
+            queue = JSON.parse(JSON.stringify(initialPatients));
+            messages = messages.slice(-2);
+            renderAll();
+            showToast('Demo day reset to 08:30 (UTH-118 is 5th in line).');
+        }
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function handleBookSomeoneElse(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('dep-name');
+            const relInput = document.getElementById('dep-rel');
+            const name = nameInput.value.trim();
+            if (!name) return;
+            queue.push({ id: 'UTH-119', name: `${name} (${relInput.value})`, isUser: false, status: 'Waiting' });
+            messages.unshift({ time: 'Just now', sender: 'ClinicQ UTH', text: `Ticket UTH-119 issued for ${name} right after UTH-118 at UTH General OPD.` });
+            nameInput.value = '';
+            closeModal('book-modal');
+            renderAll();
+            showToast(`Added ${name} (UTH-119) to the queue!`);
+        }
+        function confirmCancelTicket() {
+            closeModal('cancel-modal');
+            stopDemo();
+            queue = queue.filter(p => !p.isUser);
+            renderAll();
+            showToast('Ticket UTH-118 released. Thank you for freeing the slot!');
+        }
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3200);
+        }
+        window.onload = function () {
+            try { applyStored(localStorage.getItem(STORAGE_KEY)); } catch (err) { /* start from the seeded morning */ }
+            renderAll();
+        };
+    </script>
+</body>
 </html>
