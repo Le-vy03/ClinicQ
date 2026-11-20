@@ -1,10 +1,19 @@
 # ClinicQ
 
-A queue number for Zambia's public clinics. Patients book a desk and a time, hold a live place in line, and get the SMS or WhatsApp they would otherwise have waited all morning to hear.
+A live queue for Zambia's public clinics. Patients take a ticket without an account. Staff sign in, call the next person, and the ticket on the patient's phone moves with the desk.
 
-ClinicQ is a single static page. There is no server. The queue and the message feed live in `localStorage` under `clinicq.desk.v1`, so the patient ticket and the staff desk stay in step across two tabs in the same browser.
+The running site is [https://le-vy03.github.io/ClinicQ/](https://le-vy03.github.io/ClinicQ/).
 
-## Run
+## How a clinic gets started
+
+1. A staff member opens **Staff desk**, creates an account, and confirms the email.
+2. The project owner gives them the one-time claim code in private. They enter it on **Claim clinic**. That person becomes the clinic admin. The code is not in this repo.
+3. The admin adds colleagues by email after those people have signed up.
+4. Alternatively, the owner can insert the first admin in the Supabase SQL editor. The exact statement is in [docs/API.md](docs/API.md) under "Bootstrapping the first admin".
+
+University Teaching Hospital and its General OPD queue are already in the database.
+
+## Run locally
 
 ```bash
 npm install
@@ -13,17 +22,31 @@ npm start
 
 Open [http://127.0.0.1:4179](http://127.0.0.1:4179).
 
-`npm start` is the app. To check the production build:
+`npm start` is the app. To check the production build that GitHub Pages serves under `/ClinicQ/`:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## 60-second demo
+The preview is at [http://127.0.0.1:4179/ClinicQ/](http://127.0.0.1:4179/ClinicQ/).
 
-1. Open the app. The navy panel states the problem: patients lose whole days queuing at government clinics. ClinicQ holds a place at UTH, then messages you when it is time to walk in. The header can switch Medical Blue, Clean Teal, or Classic Green.
-2. Stay on **Patient**. Lweendo Tembo already holds **UTH-118** at University Teaching Hospital, General OPD, 5th in line, about 48 minutes.
-3. Press **Play demo**, or open **Staff desk** and press **Call Next Patient**. Each step removes the person at the desk. When two people are ahead, an SMS says to start heading in. When it is her turn, the ticket says "Your turn now!"
-4. Open **Messages** for the SMS feed sent to +260 97 418 6620. **Book for someone else** issues UTH-119. **I can't make it** releases UTH-118.
-5. Open the same URL in a second tab. Calling the next patient on the staff desk moves the ticket in the other tab. **Reset demo day** puts UTH-118 back to 5th.
+## Environment
+
+The browser uses the public Supabase URL and publishable key in `src/lib/config.ts`. Override them without editing code:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Do not put a service role or secret key in the app or in this repo.
+
+For staff email confirmation and password reset, set the Supabase Auth **Site URL** and **Redirect URLs** to:
+
+- `https://le-vy03.github.io/ClinicQ/`
+- `http://127.0.0.1:4179/`
+
+## Backend contract
+
+The database is not changed from this app. The contract is [docs/API.md](docs/API.md). The reference SQL is [supabase/schema.sql](supabase/schema.sql) and [supabase/seed.sql](supabase/seed.sql).
+
+Patients call `take_ticket`, `get_ticket_status`, and `cancel_ticket`. Staff use Supabase Auth plus the desk RPCs. Live updates come from the `queue_events`, `tickets`, and `notifications` realtime publications. SMS rows are stored, but nothing sends them yet.
